@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information and enrollment data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "email": { "type": "string", "format": "email", "description": "User's email address." },
+        "displayName": { "type": "string", "description": "User's display name." },
+        "photoURL": { "type": "string", "description": "URL to the user's profile picture." },
+        "role": { "type": "string", "enum": ["admin", "student"], "description": "User's role in the system." },
+        "enrolledCourses": { "type": "array", "items": { "type": "string" }, "description": "List of course IDs the user is enrolled in." }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Information about a course offered on the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the course." },
+        "title": { "type": "string", "description": "Title of the course." },
+        "description": { "type": "string", "description": "Detailed description of the course." },
+        "price": { "type": "number", "description": "Price of the course in USD." },
+        "thumbnail": { "type": "string", "description": "URL to the course thumbnail image." },
+        "instructorId": { "type": "string", "description": "UID of the instructor." },
+        "instructorName": { "type": "string", "description": "Name of the instructor." },
+        "category": { "type": "string", "description": "Category the course belongs to." },
+        "lessons": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "content": { "type": "string", "description": "Markdown content or video URL." },
+              "order": { "type": "number" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "price", "instructorId"]
+    },
+    "Enrollment": {
+      "title": "Enrollment",
+      "description": "Records of course enrollments and manual payment verification.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseTitle": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "amount": { "type": "number" },
+        "transactionId": { "type": "string" },
+        "proofUrl": { "type": "string", "description": "URL to the payment screenshot." },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "courseId", "amount", "status", "userPhone", "transactionId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles." },
+    "/courses/{courseId}": { "schema": "Course", "description": "Course catalog." },
+    "/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Enrollment and payment verification records." }
+  }
+}

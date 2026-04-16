@@ -1,0 +1,150 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required) - Unique identifier
+//   - email: string (required) - User email
+//   - displayName: string (optional) - User display name
+//   - photoURL: string (optional) - User photo URL
+//   - phone: string (optional) - User phone number
+//   - role: string (required, enum: ['admin', 'student']) - User role
+//   - enrolledCourses: list (optional) - List of course IDs
+//
+// Collection: courses
+// Document ID: {courseId}
+// Fields:
+//   - id: string (optional) - Unique identifier
+//   - title: string (required) - Course title
+//   - description: string (optional) - Course description
+//   - price: number (required) - Course price
+//   - thumbnail: string (optional) - Course thumbnail URL
+//   - instructorId: string (required) - UID of instructor
+//   - instructorName: string (optional) - Name of instructor
+//   - category: string (optional) - Course category
+//   - lessons: list (optional) - List of lesson objects
+//   - createdAt: timestamp (optional) - Creation time
+//
+// Collection: enrollments
+// Document ID: {enrollmentId}
+// Fields:
+//   - userId: string (required) - UID of buyer
+//   - courseId: string (required) - UID of course
+//   - courseTitle: string (optional) - Title of course
+//   - userName: string (optional) - Name of student
+//   - userEmail: string (optional) - Email of student
+//   - userPhone: string (required) - Phone of student
+//   - amount: number (required) - Amount paid
+//   - transactionId: string (optional) - Transaction ID (required for 'pending')
+//   - proofUrl: string (optional) - URL to payment screenshot
+//   - status: string (required, enum: ['pending_payment', 'pending', 'approved', 'rejected']) - Enrollment status
+//   - createdAt: timestamp (optional) - Creation time
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          request.auth.token.email == "somanianju46@gmail.com");
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (
+        url.matches("^https://.*") || 
+        url.matches("^http://.*") || 
+        url.matches("^data:image/.*;base64,.*")
+      );
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'student'] &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('photoURL' in data) || isValidUrl(data.photoURL)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 20)) &&
+             (!('enrolledCourses' in data) || data.enrolledCourses is list) &&
+             (!('createdAt' in data) || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['title', 'price', 'instructorId']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.price is number && data.price >= 0 &&
+             data.instructorId is string &&
+             (!('description' in data) || (data.description is string && data.description.size() < 5000)) &&
+             (!('thumbnail' in data) || data.thumbnail == "" || isValidUrl(data.thumbnail)) &&
+             (!('lessons' in data) || data.lessons is list);
+    }
+
+    function isValidEnrollment(data) {
+      return data.keys().hasAll(['userId', 'courseId', 'amount', 'status', 'userPhone']) &&
+             data.userId == request.auth.uid &&
+             data.courseId is string &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ['pending_payment', 'pending', 'approved', 'rejected'] &&
+             data.userPhone is string && data.userPhone.size() >= 8 &&
+             (data.status == 'pending_payment' || (data.keys().hasAll(['transactionId']) && data.transactionId is string && data.transactionId.size() > 0)) &&
+             (!('proofUrl' in data) || isValidUrl(data.proofUrl)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+             (!('userName' in data) || data.userName is string) &&
+             (!('userEmail' in data) || data.userEmail is string) &&
+             (!('courseTitle' in data) || data.courseTitle is string);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) && (request.resource.data.role == 'student' || isAdmin()) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+    }
+
+    match /courses/{courseId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidCourse(request.resource.data);
+      allow update: if isAdmin() && isValidCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /enrollments/{enrollmentId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && isValidEnrollment(request.resource.data);
+      allow update: if isAdmin() && isValidEnrollment(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
