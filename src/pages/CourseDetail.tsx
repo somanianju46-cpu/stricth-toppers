@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AuthModal } from '@/components/AuthModal';
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -160,10 +161,16 @@ export default function CourseDetail() {
                       </div>
                       <p className="text-xs text-muted-foreground">Your payment is under review. Please check back later.</p>
                     </div>
-                  ) : (
+                  ) : user ? (
                     <Button className="w-full h-12 font-bold bg-green-600 hover:bg-green-700 text-white" onClick={handleEnroll}>
                       Enroll Now
                     </Button>
+                  ) : (
+                    <AuthModal trigger={
+                      <Button className="w-full h-12 font-bold bg-green-600 hover:bg-green-700 text-white">
+                        Sign In to Enroll
+                      </Button>
+                    } />
                   )}
 
                   <div className="space-y-4">

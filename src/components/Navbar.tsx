@@ -10,21 +10,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, User, LayoutDashboard, Settings, Scissors } from 'lucide-react';
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
+import { AuthModal } from './AuthModal';
 
 export function Navbar() {
   const [user] = useAuthState(auth);
   const navigate = useNavigate();
-
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
-  };
 
   const handleLogout = () => signOut(auth);
 
@@ -90,9 +82,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button onClick={handleLogin} size="sm">
-              Sign In
-            </Button>
+            <AuthModal />
           )}
         </div>
       </div>

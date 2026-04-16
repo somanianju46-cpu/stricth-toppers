@@ -231,13 +231,11 @@ export default function Admin() {
             });
           }
         }}>
-          <DialogTrigger
-            render={
-              <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white">
-                <Plus className="w-4 h-4" /> Add New Course
-              </Button>
-            }
-          />
+          <DialogTrigger render={
+            <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white">
+              <Plus className="w-4 h-4" /> Add New Course
+            </Button>
+          } />
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>{editingCourse ? 'Edit Course' : 'Create New Course'}</DialogTitle>
